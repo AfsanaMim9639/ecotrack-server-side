@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import statsRoutes from "./routes/statsRoutes.js";
 import challengeRoutes from "./routes/challengeRoutes.js";
 import tipsRoutes from "./routes/tipsRoutes.js"; // ✅ import tips routes
+import eventRoutes from "./routes/eventRoutes.js";
 
 // Load environment variables
 dotenv.config();
@@ -27,5 +28,6 @@ mongoose
 app.use("/api/challenges", challengeRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/tips", tipsRoutes); // ✅ add tips route
+app.use("/api/events", eventRoutes);
 
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
