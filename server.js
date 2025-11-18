@@ -58,12 +58,6 @@ app.get("/", (req, res) => {
   res.send("🌿 EcoTrack Backend is running!");
 });
 
-// Optional: Serve React frontend (if built)
-const __dirname = path.resolve();
-app.use(express.static(path.join(__dirname, "client", "dist")));
-app.get("/:id", (req, res) => {
-  res.sendFile(path.join(__dirname, "client", "dist", "index.html"));
-});
 
 // Start server
 const PORT = process.env.PORT || 5000;
