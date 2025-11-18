@@ -18,7 +18,7 @@ admin.initializeApp({
   credential: admin.credential.cert({
     projectId: process.env.FIREBASE_PROJECT_ID,
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
   }),
 });
 
@@ -55,6 +55,5 @@ app.get("/", (req, res) => {
   res.send("🌿 EcoTrack Backend is running!");
 });
 
-// Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+// IMPORTANT: Vercel এর জন্য export (app.listen() remove করুন)
+export default app;
