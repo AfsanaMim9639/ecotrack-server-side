@@ -56,11 +56,39 @@ try {
   console.error("❌ Firebase Admin initialization error:", error.message);
 }
 
-// MongoDB Atlas connection
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => console.error("❌ MongoDB connection error:", err.message));
+// MongoDB Atlas connection with better error handling
+const connectDB = async () => {
+  try {
+    if (!process.env.MONGO_URI) {
+      throw new Error("MONGO_URI environment variable is not defined");
+    }
+    
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    
+    console.log("✅ MongoDB connected successfully");
+    console.log("📊 Database:", mongoose.connection.name);
+  } catch (err) {
+    console.error("❌ MongoDB connection error:", err.message);
+    console.error("Full error:", err);
+    // Don't exit process in serverless environment
+  }
+};
+
+connectDB();
+
+// Handle MongoDB connection events
+mongoose.connection.on('disconnected', () => {
+  console.log('⚠️ MongoDB disconnected');
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('❌ MongoDB error:', err);
+});
 
 // Middleware to verify Firebase token
 export const verifyToken = async (req, res, next) => {
