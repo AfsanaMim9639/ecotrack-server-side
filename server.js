@@ -10,23 +10,57 @@ import admin from "firebase-admin";
 
 dotenv.config();
 const app = express();
-app.use(cors());
+
+// ✅ CORS Configuration with your frontend URL
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+  'https://eco-track-client-side.vercel.app',
+  'https://eco-track-client-side-git-main.vercel.app',
+  'https://eco-track-client-side-afsanamim9639.vercel.app'
+];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (Postman, mobile apps, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log('❌ CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
+// Body parser middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Firebase Admin Initialization
-admin.initializeApp({
-  credential: admin.credential.cert({
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-  }),
-});
+try {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+    }),
+  });
+  console.log("✅ Firebase Admin initialized");
+} catch (error) {
+  console.error("❌ Firebase Admin initialization error:", error.message);
+}
 
 // MongoDB Atlas connection
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => console.log("❌ DB Error:", err));
+  .catch((err) => console.error("❌ MongoDB connection error:", err.message));
 
 // Middleware to verify Firebase token
 export const verifyToken = async (req, res, next) => {
@@ -44,16 +78,38 @@ export const verifyToken = async (req, res, next) => {
   }
 };
 
+// Health check route
+app.get("/", (req, res) => {
+  res.json({ 
+    message: "🌿 EcoTrack Backend is running!",
+    status: "active",
+    timestamp: new Date().toISOString(),
+    mongodb: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
+  });
+});
+
 // API Routes
-app.use("/api/challenges", challengeRoutes);
 app.use("/api/stats", statsRoutes);
+app.use("/api/challenges", challengeRoutes);
 app.use("/api/tips", tipsRoutes);
 app.use("/api/events", eventRoutes);
 
-// Root route
-app.get("/", (req, res) => {
-  res.send("🌿 EcoTrack Backend is running!");
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ 
+    message: "Route not found",
+    path: req.path 
+  });
 });
 
-// IMPORTANT: Vercel এর জন্য export (app.listen() remove করুন)
+// Error handler
+app.use((err, req, res, next) => {
+  console.error("Error:", err);
+  res.status(500).json({ 
+    message: "Internal server error",
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+// IMPORTANT: Vercel এর জন্য export (app.listen() না রাখা)
 export default app;
