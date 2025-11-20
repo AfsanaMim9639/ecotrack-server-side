@@ -114,5 +114,5 @@ router.delete("/clear", async (req, res) => {
     res.status(500).json({ message: "Failed to clear stats", error: err.message });
   }
 });
-
+console.log("test")
 export default router;
