@@ -57,22 +57,31 @@ try {
 }
 
 // MongoDB Atlas connection with better error handling
+let cached = globalThis.mongoose;
+
+if (!cached) cached = globalThis.mongoose = { conn: null, promise: null };
+
 const connectDB = async () => {
-  try {
-    if (!process.env.MONGO_URI) {
-      throw new Error("MONGO_URI environment variable is not defined");
-    }
-
-    await mongoose.connect(process.env.MONGO_URI);
-
-    console.log("✅ MongoDB connected successfully");
-    console.log("📊 Database:", mongoose.connection.name);
-  } catch (err) {
-    console.error("❌ MongoDB connection error:", err.message);
-    console.error("Full error:", err);
+  if (cached.conn) {
+    console.log("⚡ Using existing MongoDB connection");
+    return cached.conn;
   }
+
+  if (!process.env.MONGO_URI) {
+    throw new Error("MONGO_URI environment variable is not defined");
+  }
+
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(process.env.MONGO_URI).then((mongoose) => {
+      console.log("✅ MongoDB connected successfully");
+      console.log("📊 Database:", mongoose.connection.name);
+      return mongoose;
+    });
+  }
+
+  cached.conn = await cached.promise;
+  return cached.conn;
 };
-console.log("force fresh deploy");
 
 
 connectDB();
