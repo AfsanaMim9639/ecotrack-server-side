@@ -11,7 +11,7 @@ import admin from "firebase-admin";
 dotenv.config();
 const app = express();
 
-// ✅ CORS Configuration with your frontend URL
+// ✅ CORS Configuration
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
@@ -23,7 +23,6 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (Postman, mobile apps, etc.)
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.includes(origin)) {
@@ -56,9 +55,8 @@ try {
   console.error("❌ Firebase Admin initialization error:", error.message);
 }
 
-// MongoDB Atlas connection with better error handling
+// MongoDB Atlas connection
 let cached = globalThis.mongoose;
-
 if (!cached) cached = globalThis.mongoose = { conn: null, promise: null };
 
 const connectDB = async () => {
@@ -72,7 +70,10 @@ const connectDB = async () => {
   }
 
   if (!cached.promise) {
-    cached.promise = mongoose.connect(process.env.MONGO_URI).then((mongoose) => {
+    cached.promise = mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+    }).then((mongoose) => {
       console.log("✅ MongoDB connected successfully");
       console.log("📊 Database:", mongoose.connection.name);
       return mongoose;
@@ -83,9 +84,8 @@ const connectDB = async () => {
   return cached.conn;
 };
 
-
-connectDB();
-console.log("🔍 Loaded MONGO_URI:", process.env.MONGO_URI);
+// 🔥 CRITICAL: Connect to DB immediately
+connectDB().catch(err => console.error("❌ Initial DB connection failed:", err));
 
 // Handle MongoDB connection events
 mongoose.connection.on('disconnected', () => {
@@ -94,6 +94,21 @@ mongoose.connection.on('disconnected', () => {
 
 mongoose.connection.on('error', (err) => {
   console.error('❌ MongoDB error:', err);
+});
+
+// 🔥 MIDDLEWARE: Ensure DB connection before each request
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error("❌ DB Connection Error:", error);
+    return res.status(500).json({ 
+      success: false,
+      message: "Database connection failed", 
+      error: error.message 
+    });
+  }
 });
 
 // Middleware to verify Firebase token
@@ -122,20 +137,7 @@ app.get("/", (req, res) => {
   });
 });
 
-
-app.use(async (req, res, next) => {
-  try {
-    await connectDB();
-    next();
-  } catch (error) {
-    res.status(500).json({ 
-      message: "Database connection failed", 
-      error: error.message 
-    });
-  }
-});
-
-// API Routes
+// 🔥 API Routes - MUST be after DB middleware
 app.use("/api/stats", statsRoutes);
 app.use("/api/challenges", challengeRoutes);
 app.use("/api/tips", tipsRoutes);
@@ -144,6 +146,7 @@ app.use("/api/events", eventRoutes);
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ 
+    success: false,
     message: "Route not found",
     path: req.path 
   });
@@ -153,10 +156,11 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   console.error("Error:", err);
   res.status(500).json({ 
+    success: false,
     message: "Internal server error",
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
-console.log("test")
-// IMPORTANT: Vercel এর জন্য export (app.listen() না রাখা)
+
+// Export for Vercel
 export default app;
