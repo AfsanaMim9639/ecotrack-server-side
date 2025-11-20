@@ -3,7 +3,7 @@ import connectDB from "../utils/db.js";
 import Challenge from "../models/Challenge.js";
 
 export default async function handler(req, res) {
-  await connectDB(); // connection reuse হবে
+  await connectDB(); 
 
   if (req.method === "GET") {
     try {
