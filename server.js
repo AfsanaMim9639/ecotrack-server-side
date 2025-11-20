@@ -161,6 +161,6 @@ app.use((err, req, res, next) => {
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
-
+console.log("test")
 // Export for Vercel
 export default app;
