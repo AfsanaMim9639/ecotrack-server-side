@@ -72,6 +72,7 @@ const connectDB = async () => {
     console.error("Full error:", err);
   }
 };
+console.log("force fresh deploy");
 
 
 connectDB();
